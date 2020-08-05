@@ -9,21 +9,44 @@
   const disconnectTrigger = document.getElementById("js-disconnect-trigger");
   const permitTrigger = document.getElementById("js-permit-trigger");
   const rejectTrigger = document.getElementById("js-reject-trigger");
+  const cameraTrigger = document.getElementById("js-camera-trigger");
+  const cameraStatus = document.getElementById("js-camera-status");
+  const microphoneTrigger = document.getElementById("js-microphone-trigger");
+  const microphoneStatus = document.getElementById("js-microphone-status");
 
   // chat
   const localId = document.getElementById("js-local-id");
   const localText = document.getElementById("js-local-text");
   const closeTrigger = document.getElementById("js-close-trigger");
   const sendTrigger = document.getElementById("js-send-trigger");
-  const remoteId = document.getElementById("js-remote-id");
   const messages = document.getElementById("js-messages");
 
+  // display
+  const myDisplay = document.getElementById("my-display");
+  const theirDisplay = document.getElementById("their-display");
+  const shareTrigger = document.getElementById("js-share-trigger");
+
   // localStream ... ビデオ、音声データ
-  const localStream = await navigator.mediaDevices
+  let localStream = await navigator.mediaDevices
     .getUserMedia({ video: true, audio: true })
     .catch((err) => alert("mediaDevice.getUserMedia() error:", err));
   myVideo.srcObject = localStream;
   myVideo.play();
+
+  // displayStream: 画面共有
+  // const displayStream = await navigator.mediaDevices
+  //   .getDisplayMedia({ video: true })
+  //   .catch((err) => alert("mediaDevice.getDisplayMedia() error:", err));
+
+  cameraTrigger.addEventListener("click", () => {
+    localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
+    cameraStatus.textContent = localStream.getVideoTracks()[0].enabled ? "ON" : "OFF";
+  });
+
+  microphoneTrigger.addEventListener("click", () => {
+    localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+    microphoneStatus.textContent = localStream.getAudioTracks()[0].enabled ? "ON" : "OFF";
+  });
 
   const peer = new Peer({
     key: "1212399c-448f-4135-89d3-76deff99795a",
@@ -34,9 +57,12 @@
   peer.once("open", (id) => (localId.textContent = id));
 
   // 相手から接続要求がきた時
-  peer.on("call", (mediaConnection) => {
+  peer.on("call", async (mediaConnection) => {
+    // default: audio muted
+    localStream.getAudioTracks()[0].enabled = false;
     mediaConnection.answer(localStream);
     setEventListener(mediaConnection);
+
     // permit
     // permitTrigger.onclick = () => {
     //   mediaConnection.answer(localStream);
@@ -52,12 +78,25 @@
     setEventListener(mediaConnection);
   };
 
+  // 画面共有
+  // shareTrigger.onclick = () => {
+  //   const displayConnection = peer.call(theirID.value, displayStream);
+  //   setEventListener2(displayConnection);
+  // };
+
   const setEventListener = (mediaConnection) => {
     mediaConnection.on("stream", (stream) => {
       theirVideo.srcObject = stream;
       theirVideo.play();
     });
   };
+
+  // const setEventListener2 = (mediaConnection) => {
+  //   mediaConnection.on("stream", (stream) => {
+  //     theirDisplay.srcObject = stream;
+  //     theirDisplay.play();
+  //   });
+  // };
 
   // バン
   disconnectTrigger.onclick = () => {
@@ -120,7 +159,7 @@
     });
 
     // Register closing handler
-    closeTrigger.addEventListener("click", () => dataConnection.close(), {
+    disconnectTrigger.addEventListener("click", () => dataConnection.close(), {
       once: true,
     });
 
